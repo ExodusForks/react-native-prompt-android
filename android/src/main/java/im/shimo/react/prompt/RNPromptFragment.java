@@ -5,9 +5,7 @@ import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.v7.app.AlertDialog;
-import android.text.InputType;
-import android.view.LayoutInflater;
+import androidx.appcompat.app.AlertDialog;
 import android.view.WindowManager;
 import android.widget.EditText;
 
@@ -61,19 +59,14 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
         mListener = listener;
     }
 
+    private int getDp(float value){
+        return (int) (getResources().getDisplayMetrics().density * value);
+    }
+
     public Dialog createDialog(Context activityContext, Bundle arguments) {
         AlertDialog.Builder builder;
-        String style = arguments.containsKey(ARG_STYLE) ? arguments.getString(ARG_STYLE) : "default";
-        style = style != null ? style : "default";
 
-        // AlertDialog style
-        switch (style) {
-            case "shimo":
-                builder = new AlertDialog.Builder(activityContext, R.style.ShimoAlertDialogStyle);
-                break;
-            default:
-                builder = new AlertDialog.Builder(activityContext);
-        }
+        builder = new AlertDialog.Builder(activityContext, R.style.CleanDialogTheme);
 
         builder.setTitle(arguments.getString(ARG_TITLE));
 
@@ -98,76 +91,124 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
 
         AlertDialog alertDialog = builder.create();
 
+        alertDialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialog) {
+                AlertDialog ad = (AlertDialog) dialog;
+
+                int titleId = getResources().getIdentifier("alertTitle", "id", "android");
+                android.widget.TextView titleView = ad.findViewById(titleId);
+                if (titleView != null) {
+                    titleView.setPadding(
+                            getDp(25),
+                            getDp(20),
+                            getDp(25),
+                            titleView.getPaddingBottom()
+                    );
+                }
+
+                int messageId = getResources().getIdentifier("message", "id", "android");
+                android.widget.TextView messageView = ad.findViewById(messageId);
+                if (messageView != null) {
+                    messageView.setPadding(
+                            getDp(25),
+                            messageView.getPaddingTop(),
+                            getDp(25),
+                            messageView.getPaddingBottom()
+                    );
+                }
+
+                android.widget.Button refButton = ad.getButton(DialogInterface.BUTTON_POSITIVE);
+                if (refButton == null) {
+                    refButton = ad.getButton(DialogInterface.BUTTON_NEGATIVE);
+                }
+                if (refButton == null) return;
+
+                android.view.ViewGroup buttonBar = (android.view.ViewGroup) refButton.getParent();
+                if (buttonBar == null) return;
+
+                java.util.List<android.widget.Button> sortedButtons = new java.util.ArrayList<>();
+                for (int i = 0; i < buttonBar.getChildCount(); i++) {
+                    android.view.View child = buttonBar.getChildAt(i);
+                    if (child instanceof android.widget.Button && child.getVisibility() != android.view.View.GONE) {
+                        sortedButtons.add((android.widget.Button) child);
+                    }
+                }
+
+                if (sortedButtons.isEmpty()) return;
+
+                int screenWidth = getResources().getDisplayMetrics().widthPixels;
+                int dialogMargin = getDp(100);
+                int dialogInnerWidth = screenWidth - dialogMargin;
+
+                int barSidePadding = getDp(15);
+                int barBottomPadding = getDp(15);
+                int barTopPadding = getDp(10); 
+
+                int buttonGap = getDp(8);
+
+                buttonBar.setClipChildren(false);
+                buttonBar.setClipToPadding(false);
+                buttonBar.setPadding(barSidePadding, barTopPadding, barSidePadding, barBottomPadding);
+                int buttonCount = sortedButtons.size();
+                int usableWidth = dialogInnerWidth - (barSidePadding * 2);
+                int totalGapSpace = (buttonCount - 1) * buttonGap;
+                int singleButtonWidth = (usableWidth - totalGapSpace) / buttonCount;
+
+                for (int i = 0; i < buttonCount; i++) {
+                    android.widget.Button btn = sortedButtons.get(i);
+                    android.widget.LinearLayout.LayoutParams params =
+                            (android.widget.LinearLayout.LayoutParams) btn.getLayoutParams();
+
+                    params.width = singleButtonWidth;
+                    params.weight = 0;
+                    int rightMargin = (i < buttonCount - 1) ? buttonGap : 0;
+
+                    params.setMargins(0, 0, rightMargin, 0);
+                    params.setMarginEnd(rightMargin);
+
+                    btn.setLayoutParams(params);
+                }
+            }
+        });
+
         Boolean isShowInput = arguments.getBoolean(ARG_SHOW_INPUT, false);
         if (!isShowInput) {
             return alertDialog;
         }
-        
-        // input style
-        LayoutInflater inflater = LayoutInflater.from(activityContext);
+
         final EditText input;
-        switch (style) {
-            case "shimo":
-                input = (EditText) inflater.inflate(R.layout.edit_text, null);
-                break;
-            default:
-                input = new EditText(activityContext);
-        }
-
-        // input type
-        int type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
-        if (arguments.containsKey(ARG_TYPE)) {
-            String typeString = arguments.getString(ARG_TYPE);
-            if (typeString != null) {
-                switch (typeString) {
-                    case "secure-text":
-                        type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD;
-                        break;
-                    case "numeric":
-                        type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_CLASS_NUMBER;
-                        break;
-                    case "email-address":
-                        type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS;
-                        break;
-                    case "phone-pad":
-                        type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_CLASS_PHONE;
-                        break;
-                    case "plain-text":
-                    default:
-                        type = InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS;
-                }
-            }
-        }
-        input.setInputType(type);
-
-        if (arguments.containsKey(ARG_DEFAULT_VALUE)) {
-            String defaultValue = arguments.getString(ARG_DEFAULT_VALUE);
-            if (defaultValue != null) {
-                input.setText(defaultValue);
-                int textLength = input.getText().length();
-                input.setSelection(textLength, textLength);
-            }
-        }
-
-        if (arguments.containsKey(ARG_PLACEHOLDER)) {
-            input.setHint(arguments.getString(ARG_PLACEHOLDER));
-        }
-        alertDialog.setView(input, 50, 15, 50, 0);
+        input = new EditText(activityContext);
+        input.setTextColor(android.graphics.Color.WHITE);
+        alertDialog.setView(input, getDp(20), getDp(15), getDp(20), 0);
 
         mInputText = input;
-        
+
         return alertDialog;
     }
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         Dialog dialog = this.createDialog(getActivity(), getArguments());
+
         if (mInputText != null) {
             if (mInputText.requestFocus()) {
                 dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
             }
         }
         return dialog;
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        Dialog dialog = getDialog();
+        if (dialog != null && dialog.getWindow() != null) {
+            int screenWidth = getResources().getDisplayMetrics().widthPixels;
+            int targetWidth = screenWidth - getDp(100);
+
+            dialog.getWindow().setLayout(targetWidth, android.view.ViewGroup.LayoutParams.WRAP_CONTENT);
+        }
     }
 
     @Override
