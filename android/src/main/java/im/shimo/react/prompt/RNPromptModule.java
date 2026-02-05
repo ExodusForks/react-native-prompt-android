@@ -109,7 +109,7 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
         final Bundle args = new Bundle();
         if (options.hasKey(KEY_TITLE)) {
             args.putString(RNPromptFragment.ARG_TITLE, options.getString(KEY_TITLE));
-        }        
+        }
         if (options.hasKey(KEY_MESSAGE)) {
             args.putString(RNPromptFragment.ARG_MESSAGE, options.getString(KEY_MESSAGE));
         }

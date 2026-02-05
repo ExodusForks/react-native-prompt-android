@@ -1,12 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="ShimoAlertDialogStyle" parent="Theme.AppCompat.Light.Dialog.Alert">
-        <item name="colorAccent">@color/prompt_color</item>
-    </style>
-
     <style name="ShimoEditTextStyle" parent="Widget.AppCompat.EditText">
         <item name="colorControlNormal">@color/prompt_color</item>
         <item name="colorControlActivated">@color/prompt_color</item>
         <item name="colorControlHighlight">@color/prompt_color</item>
+    </style>
+    <style name="CleanDialogTheme" parent="Theme.AppCompat.Dialog.Alert">
+        <item name="android:windowBackground">@drawable/dialog_custom_bg</item>
+        <item name="android:windowTitleStyle">@style/CleanDialogTitle</item>
+
+        <item name="android:textColor">#99FFFFFF</item>
+        <item name="android:textColorPrimary">#99FFFFFF</item>
+        <item name="android:textColorSecondary">#99FFFFFF</item>
+
+        <item name="buttonBarPositiveButtonStyle">@style/CleanDialogButton</item>
+        <item name="buttonBarNegativeButtonStyle">@style/CleanDialogButton</item>
+        <item name="buttonBarNeutralButtonStyle">@style/CleanDialogButton</item>
+
+        <item name="android:windowMinWidthMajor">100dp</item>
+        <item name="android:windowMinWidthMinor">100dp</item>
+    </style>
+
+    <style name="CleanDialogTitle" parent="TextAppearance.AppCompat.Title">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textSize">16sp</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="CleanDialogButton" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:background">@drawable/button_custom_bg</item>
+
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+
+        <item name="android:layout_margin">4dp</item>
+
+        <item name="android:minHeight">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
     </style>
 </resources>
