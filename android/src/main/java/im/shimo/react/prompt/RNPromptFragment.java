@@ -99,29 +99,17 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
                 int titleId = getResources().getIdentifier("alertTitle", "id", "android");
                 android.widget.TextView titleView = ad.findViewById(titleId);
                 if (titleView != null) {
-                    titleView.setPadding(
-                            getDp(25),
-                            getDp(20),
-                            getDp(25),
-                            titleView.getPaddingBottom()
-                    );
+                    titleView.setPadding(getDp(25), getDp(20), getDp(25), titleView.getPaddingBottom());
                 }
 
                 int messageId = getResources().getIdentifier("message", "id", "android");
                 android.widget.TextView messageView = ad.findViewById(messageId);
                 if (messageView != null) {
-                    messageView.setPadding(
-                            getDp(25),
-                            messageView.getPaddingTop(),
-                            getDp(25),
-                            messageView.getPaddingBottom()
-                    );
+                    messageView.setPadding(getDp(25), messageView.getPaddingTop(), getDp(25), messageView.getPaddingBottom());
                 }
 
                 android.widget.Button refButton = ad.getButton(DialogInterface.BUTTON_POSITIVE);
-                if (refButton == null) {
-                    refButton = ad.getButton(DialogInterface.BUTTON_NEGATIVE);
-                }
+                if (refButton == null) refButton = ad.getButton(DialogInterface.BUTTON_NEGATIVE);
                 if (refButton == null) return;
 
                 android.view.ViewGroup buttonBar = (android.view.ViewGroup) refButton.getParent();
@@ -143,31 +131,84 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
 
                 int barSidePadding = getDp(15);
                 int barBottomPadding = getDp(15);
-                int barTopPadding = getDp(10); 
+                int barTopPadding = getDp(10);
 
                 int buttonGap = getDp(8);
 
                 buttonBar.setClipChildren(false);
                 buttonBar.setClipToPadding(false);
-                buttonBar.setPadding(barSidePadding, barTopPadding, barSidePadding, barBottomPadding);
+
                 int buttonCount = sortedButtons.size();
                 int usableWidth = dialogInnerWidth - (barSidePadding * 2);
                 int totalGapSpace = (buttonCount - 1) * buttonGap;
                 int singleButtonWidth = (usableWidth - totalGapSpace) / buttonCount;
 
-                for (int i = 0; i < buttonCount; i++) {
-                    android.widget.Button btn = sortedButtons.get(i);
-                    android.widget.LinearLayout.LayoutParams params =
-                            (android.widget.LinearLayout.LayoutParams) btn.getLayoutParams();
+                boolean needsVerticalLayout = false;
+                int widthSpec = android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED);
+                int heightSpec = android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED);
 
-                    params.width = singleButtonWidth;
-                    params.weight = 0;
-                    int rightMargin = (i < buttonCount - 1) ? buttonGap : 0;
+                for (android.widget.Button btn : sortedButtons) {
+                    btn.measure(widthSpec, heightSpec);
+                    int neededWidth = btn.getMeasuredWidth();
+                    if (neededWidth > singleButtonWidth) {
+                        needsVerticalLayout = true;
+                        break;
+                    }
+                }
 
-                    params.setMargins(0, 0, rightMargin, 0);
-                    params.setMarginEnd(rightMargin);
+                if (needsVerticalLayout) {
+                    if (buttonBar instanceof android.widget.LinearLayout) {
+                        ((android.widget.LinearLayout) buttonBar).setOrientation(android.widget.LinearLayout.VERTICAL);
+                        ((android.widget.LinearLayout) buttonBar).setGravity(android.view.Gravity.CENTER_HORIZONTAL);
+                    }
+                    buttonBar.setPadding(barSidePadding, barTopPadding, barSidePadding, barBottomPadding);
 
-                    btn.setLayoutParams(params);
+                    for (int i = 0; i < buttonCount; i++) {
+                        android.widget.Button btn = sortedButtons.get(i);
+                        android.widget.LinearLayout.LayoutParams params =
+                                new android.widget.LinearLayout.LayoutParams(
+                                        usableWidth,
+                                        android.widget.LinearLayout.LayoutParams.WRAP_CONTENT
+                                );
+                        params.weight = 0;
+                        int bottomMargin = (i < buttonCount - 1) ? buttonGap : 0;
+                        params.setMargins(0, 0, 0, bottomMargin);
+                        btn.setLayoutParams(params);
+                    }
+                } else {
+                    if (buttonBar instanceof android.widget.LinearLayout) {
+                        ((android.widget.LinearLayout) buttonBar).setOrientation(android.widget.LinearLayout.HORIZONTAL);
+                    }
+                    buttonBar.setPadding(barSidePadding, barTopPadding, barSidePadding, barBottomPadding);
+
+                    int maxHeight = 0;
+                    for (int i = 0; i < buttonCount; i++) {
+                        android.widget.Button btn = sortedButtons.get(i);
+                        android.widget.LinearLayout.LayoutParams params =
+                                (android.widget.LinearLayout.LayoutParams) btn.getLayoutParams();
+
+                        params.width = singleButtonWidth;
+                        params.weight = 0;
+                        int rightMargin = (i < buttonCount - 1) ? buttonGap : 0;
+                        params.setMargins(0, 0, rightMargin, 0);
+                        params.setMarginEnd(rightMargin);
+                        btn.setLayoutParams(params);
+
+                        int btnWidthSpec = android.view.View.MeasureSpec.makeMeasureSpec(
+                                singleButtonWidth, android.view.View.MeasureSpec.EXACTLY);
+                        int btnHeightSpec = android.view.View.MeasureSpec.makeMeasureSpec(
+                                0, android.view.View.MeasureSpec.UNSPECIFIED);
+                        btn.measure(btnWidthSpec, btnHeightSpec);
+                        maxHeight = Math.max(maxHeight, btn.getMeasuredHeight());
+                    }
+
+                    for (android.widget.Button btn : sortedButtons) {
+                        android.widget.LinearLayout.LayoutParams params =
+                                (android.widget.LinearLayout.LayoutParams) btn.getLayoutParams();
+                        params.height = maxHeight;
+                        btn.setLayoutParams(params);
+                        btn.setGravity(android.view.Gravity.CENTER);
+                    }
                 }
             }
         });
