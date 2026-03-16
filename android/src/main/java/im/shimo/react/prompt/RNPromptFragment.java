@@ -148,6 +148,7 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
                 int heightSpec = android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED);
 
                 for (android.widget.Button btn : sortedButtons) {
+                    btn.setAllCaps(false);
                     btn.measure(widthSpec, heightSpec);
                     int neededWidth = btn.getMeasuredWidth();
                     if (neededWidth > singleButtonWidth) {
