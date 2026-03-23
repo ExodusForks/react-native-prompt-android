@@ -96,16 +96,51 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
             public void onShow(DialogInterface dialog) {
                 AlertDialog ad = (AlertDialog) dialog;
 
-                int titleId = getResources().getIdentifier("alertTitle", "id", "android");
+                int titleId = androidx.appcompat.R.id.alertTitle;
                 android.widget.TextView titleView = ad.findViewById(titleId);
                 if (titleView != null) {
-                    titleView.setPadding(getDp(25), getDp(20), getDp(25), titleView.getPaddingBottom());
+                    titleView.setPadding(getDp(25), getDp(20), getDp(25), 0);
+
+                    if (titleView.getParent() instanceof android.view.View) {
+                        android.view.View titleParent = (android.view.View) titleView.getParent();
+                        titleParent.setPadding(0, 0, 0, 0);
+
+                        if (titleParent.getParent() instanceof android.view.ViewGroup) {
+                            android.view.ViewGroup titleGrandparent = (android.view.ViewGroup) titleParent.getParent();
+                            titleGrandparent.setPadding(0, 0, 0, 0);
+                            titleGrandparent.setMinimumHeight(0);
+                            if (titleGrandparent.getLayoutParams() instanceof android.view.ViewGroup.MarginLayoutParams) {
+                                android.view.ViewGroup.MarginLayoutParams params = (android.view.ViewGroup.MarginLayoutParams) titleGrandparent.getLayoutParams();
+                                params.setMargins(0, 0, 0, 0);
+                                titleGrandparent.setLayoutParams(params);
+                            }
+                            // Hide any extra children (dividers/spacers) except the title parent
+                            for (int i = 0; i < titleGrandparent.getChildCount(); i++) {
+                                android.view.View child = titleGrandparent.getChildAt(i);
+                                if (child != titleParent) {
+                                    child.setVisibility(android.view.View.GONE);
+                                }
+                            }
+
+                        }
+                    }
                 }
 
                 int messageId = getResources().getIdentifier("message", "id", "android");
                 android.widget.TextView messageView = ad.findViewById(messageId);
                 if (messageView != null) {
-                    messageView.setPadding(getDp(25), messageView.getPaddingTop(), getDp(25), messageView.getPaddingBottom());
+                    messageView.setPadding(getDp(25), getDp(5), getDp(25), getDp(20));
+
+                    if (messageView.getParent() instanceof android.view.View) {
+                        android.view.View messageParent = (android.view.View) messageView.getParent();
+                        messageParent.setPadding(0, 0, 0, 0);
+
+                        if (messageParent.getParent() instanceof android.view.View) {
+                            android.view.View messageGrandparent = (android.view.View) messageParent.getParent();
+                            messageGrandparent.setPadding(0, 0, 0, 0);
+
+                        }
+                    }
                 }
 
                 android.widget.Button refButton = ad.getButton(DialogInterface.BUTTON_POSITIVE);
@@ -113,6 +148,10 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
                 if (refButton == null) return;
 
                 android.view.ViewGroup buttonBar = (android.view.ViewGroup) refButton.getParent();
+                if (buttonBar != null && buttonBar.getParent() instanceof android.view.View) {
+                    android.view.View buttonPanel = (android.view.View) buttonBar.getParent();
+                    buttonPanel.setPadding(0, 0, 0, 0);
+                }
                 if (buttonBar == null) return;
 
                 java.util.List<android.widget.Button> sortedButtons = new java.util.ArrayList<>();
@@ -131,7 +170,7 @@ public class RNPromptFragment extends DialogFragment implements DialogInterface.
 
                 int barSidePadding = getDp(15);
                 int barBottomPadding = getDp(15);
-                int barTopPadding = getDp(10);
+                int barTopPadding = 0;
 
                 int buttonGap = getDp(8);
 
