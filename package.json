@@ -1,27 +1,31 @@
 {
-    "name": "@exodus/react-native-prompt-android",
-    "version": "0.3.4-exodus.7",
-    "files": ["index*","android/*","package.json"],
-    "description": "Polyfill for Alert.prompt on Android",
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/shimohq/react-native-prompt-android"
-    },
-    "license": "MIT",
-    "keywords": [
-        "react-component",
-        "react-native",
-        "prompt",
-        "Alert",
-        "ios",
-        "android"
-    ],
-    "scripts": {
-        "lint": "eslint ./ --ignore-pattern '**/Example/*'"
-    },
-    "devDependencies": {
-        "babel-eslint": "^6.1.2",
-        "eslint": "^2.13.1",
-        "eslint-plugin-react": "^4.3.0"
-    }
+  "name": "@exodus/react-native-prompt-android",
+  "version": "0.3.4-exodus.8",
+  "files": [
+    "index*",
+    "android/*",
+    "package.json"
+  ],
+  "description": "Polyfill for Alert.prompt on Android",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shimohq/react-native-prompt-android"
+  },
+  "license": "MIT",
+  "keywords": [
+    "react-component",
+    "react-native",
+    "prompt",
+    "Alert",
+    "ios",
+    "android"
+  ],
+  "scripts": {
+    "lint": "eslint ./ --ignore-pattern '**/Example/*'"
+  },
+  "devDependencies": {
+    "babel-eslint": "^6.1.2",
+    "eslint": "^2.13.1",
+    "eslint-plugin-react": "^4.3.0"
+  }
 }
