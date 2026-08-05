@@ -53,6 +53,7 @@ type AlertOptions = {
     cancelable?: ?boolean,
     userInterfaceStyle?: 'unspecified' | 'light' | 'dark',
     onDismiss?: ?() => void,
+    showOverTopActivity?: ?boolean,
 };
 
 /**
@@ -89,6 +90,7 @@ type DialogOptions = {
     buttonNeutral?: string,
     items?: Array<string>,
     cancelable?: boolean,
+    showOverTopActivity?: boolean,
 };
 
 /**
@@ -109,6 +111,9 @@ function alert(
 
     if (options && options.cancelable) {
         config.cancelable = options.cancelable;
+    }
+    if (options && options.showOverTopActivity) {
+        config.showOverTopActivity = true;
     }
     // At most three buttons (neutral, negative, positive). Ignore rest.
     // The text 'OK' should be probably localized. iOS Alert does that in native.

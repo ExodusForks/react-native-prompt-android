@@ -2,8 +2,12 @@ package im.shimo.react.prompt;
 
 
 import android.app.Activity;
+import android.app.Application;
+import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 
 import com.facebook.common.logging.FLog;
 import com.facebook.react.bridge.Callback;
@@ -15,7 +19,10 @@ import com.facebook.react.bridge.ReadableArray;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.common.MapBuilder;
 import com.facebook.react.module.annotations.ReactModule;
+import com.facebook.react.modules.core.DeviceEventManagerModule;
 import com.facebook.react.modules.dialog.DialogModule;
+
+import java.lang.ref.WeakReference;
 
 import java.util.Map;
 
@@ -43,15 +50,21 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
     /* package */ static final String KEY_DEFAULT_VALUE = "defaultValue";
     /* package */ static final String KEY_PLACEHOLDER = "placeholder";
     /* package */ static final String KEY_SHOW_INPUT = "showInput";
+    /* package */ static final String KEY_SHOW_OVER_TOP_ACTIVITY = "showOverTopActivity";
+    /* package */ static final String TICK_EVENT = "PromptAndroidTick";
 
     /* package */ static final Map<String, Object> CONSTANTS = MapBuilder.<String, Object>of(
             ACTION_BUTTON_CLICKED, ACTION_BUTTON_CLICKED,
             ACTION_DISMISSED, ACTION_DISMISSED,
             KEY_BUTTON_POSITIVE, DialogInterface.BUTTON_POSITIVE,
             KEY_BUTTON_NEGATIVE, DialogInterface.BUTTON_NEGATIVE,
-            KEY_BUTTON_NEUTRAL, DialogInterface.BUTTON_NEUTRAL);
+            KEY_BUTTON_NEUTRAL, DialogInterface.BUTTON_NEUTRAL,
+            KEY_SHOW_OVER_TOP_ACTIVITY, true);
 
     private boolean mIsInForeground;
+    // getCurrentActivity() only reports ours; this sees third-party activities too.
+    private WeakReference<Activity> mTopActivity = new WeakReference<>(null);
+    private volatile Handler mTicker;
 
     public RNPromptModule(ReactApplicationContext reactContext) {
         super(reactContext);
@@ -65,6 +78,67 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
     @Override
     public void initialize() {
         getReactApplicationContext().addLifecycleEventListener(this);
+        Application app = (Application) getReactApplicationContext().getApplicationContext();
+        app.registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+            @Override public void onActivityResumed(Activity a) { mTopActivity = new WeakReference<>(a); }
+            @Override public void onActivityCreated(Activity a, Bundle b) {}
+            @Override public void onActivityStarted(Activity a) {}
+            @Override public void onActivityPaused(Activity a) {}
+            @Override public void onActivityStopped(Activity a) {}
+            @Override public void onActivitySaveInstanceState(Activity a, Bundle b) {}
+            @Override public void onActivityDestroyed(Activity a) {}
+        });
+    }
+
+    // Paired with the option above: React Native stops JS timers while our host is paused.
+    @ReactMethod
+    public void startTicker(double intervalMs) {
+        stopTicker();
+        final long interval = (long) intervalMs;
+        mTicker = new Handler(Looper.getMainLooper());
+        mTicker.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                ReactApplicationContext ctx = getReactApplicationContext();
+                if (ctx.hasActiveCatalystInstance()) {
+                    ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class).emit(TICK_EVENT, null);
+                }
+                // Re-read, never capture: re-posting to a dropped handler ticks forever.
+                Handler ticker = mTicker;
+                if (ticker != null) ticker.postDelayed(this, interval);
+            }
+        }, interval);
+    }
+
+    @ReactMethod
+    public void stopTicker() {
+        final Handler ticker = mTicker;
+        mTicker = null;
+        if (ticker != null) ticker.removeCallbacksAndMessages(null);
+    }
+
+    // Not a DialogFragment: recreation restores it without its listener, so nothing settles.
+    private void showAlertOverTopActivity(final Bundle args, final Callback callback) {
+        final Activity activity = mTopActivity.get();
+        if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
+            FLog.w(RNPromptModule.class, "Tried to show an alert with no activity on top");
+            if (callback != null) callback.invoke(ACTION_DISMISSED);
+            return;
+        }
+
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                PromptFragmentListener listener =
+                        callback == null ? null : new PromptFragmentListener(callback);
+                RNPromptFragment fragment = new RNPromptFragment();
+                fragment.setListener(listener);
+                Dialog dialog = fragment.createDialog(activity, args);
+                dialog.setCancelable(!args.containsKey(KEY_CANCELABLE) || args.getBoolean(KEY_CANCELABLE));
+                if (listener != null) dialog.setOnDismissListener(listener);
+                dialog.show();
+            }
+        });
     }
 
     @Override
@@ -85,6 +159,7 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
     @Override
     public void onHostResume() {
         mIsInForeground = true;
+        stopTicker();
         // Check if a dialog has been created while the host was paused, so that we can show it now.
         FragmentManagerHelper fragmentManagerHelper = getFragmentManagerHelper();
         if (fragmentManagerHelper != null) {
@@ -100,12 +175,6 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
     @ReactMethod
     public void alertWithArgs(
          ReadableMap options, final Callback callback) {
-        final FragmentManagerHelper fragmentManagerHelper = getFragmentManagerHelper();
-        if (fragmentManagerHelper == null) {
-            FLog.w(RNPromptModule.class, "Tried to show an alert while not attached to an Activity");
-            return;
-        }
-
         final Bundle args = new Bundle();
         if (options.hasKey(KEY_TITLE)) {
             args.putString(RNPromptFragment.ARG_TITLE, options.getString(KEY_TITLE));
@@ -132,6 +201,16 @@ public class RNPromptModule extends ReactContextBaseJavaModule implements Lifecy
         }
         if (options.hasKey(KEY_CANCELABLE)) {
             args.putBoolean(KEY_CANCELABLE, options.getBoolean(KEY_CANCELABLE));
+        }
+        if (options.hasKey(KEY_SHOW_OVER_TOP_ACTIVITY) && options.getBoolean(KEY_SHOW_OVER_TOP_ACTIVITY)) {
+            showAlertOverTopActivity(args, callback);
+            return;
+        }
+
+        final FragmentManagerHelper fragmentManagerHelper = getFragmentManagerHelper();
+        if (fragmentManagerHelper == null) {
+            FLog.w(RNPromptModule.class, "Tried to show an alert while not attached to an Activity");
+            return;
         }
         fragmentManagerHelper.showNewAlert(mIsInForeground, args, callback);
     }
